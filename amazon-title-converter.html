@@ -1,0 +1,621 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Amazon タイトル変換ツール</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0f0f11;
+    --surface: #1a1a1f;
+    --surface2: #222228;
+    --border: #2e2e38;
+    --accent: #f0c84a;
+    --accent2: #4af0a0;
+    --text: #f0eff4;
+    --muted: #888899;
+    --danger: #f05a4a;
+    --radius: 10px;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Noto Sans JP', sans-serif;
+    min-height: 100vh;
+    padding: 40px 20px 80px;
+  }
+
+  /* Background grid */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(240,200,74,0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(240,200,74,0.03) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .container {
+    max-width: 680px;
+    margin: 0 auto;
+    position: relative;
+    z-index: 1;
+  }
+
+  /* Header */
+  .header {
+    margin-bottom: 40px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    color: var(--accent);
+    background: rgba(240,200,74,0.1);
+    border: 1px solid rgba(240,200,74,0.2);
+    padding: 4px 10px;
+    border-radius: 4px;
+    width: fit-content;
+  }
+
+  .badge::before { content: '▶'; font-size: 8px; }
+
+  h1 {
+    font-size: clamp(22px, 5vw, 32px);
+    font-weight: 700;
+    letter-spacing: -0.5px;
+    line-height: 1.2;
+  }
+
+  h1 span { color: var(--accent); }
+
+  .subtitle {
+    font-size: 14px;
+    color: var(--muted);
+    line-height: 1.6;
+  }
+
+  /* API Key section */
+  .apikey-section {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 20px;
+    margin-bottom: 28px;
+  }
+
+  .apikey-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 12px;
+  }
+
+  .apikey-label {
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .apikey-label::before {
+    content: '🔑';
+    font-size: 14px;
+  }
+
+  .apikey-hint {
+    font-size: 11px;
+    color: var(--muted);
+  }
+
+  .apikey-hint a {
+    color: var(--accent);
+    text-decoration: none;
+  }
+
+  .apikey-hint a:hover { text-decoration: underline; }
+
+  .key-row {
+    display: flex;
+    gap: 10px;
+  }
+
+  .key-input {
+    flex: 1;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 10px 14px;
+    font-family: 'DM Mono', monospace;
+    font-size: 13px;
+    color: var(--text);
+    outline: none;
+    transition: border-color 0.2s;
+  }
+
+  .key-input:focus { border-color: var(--accent); }
+
+  .key-save-btn {
+    padding: 10px 16px;
+    background: rgba(240,200,74,0.1);
+    border: 1px solid rgba(240,200,74,0.3);
+    border-radius: 8px;
+    color: var(--accent);
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+    white-space: nowrap;
+  }
+
+  .key-save-btn:hover { background: rgba(240,200,74,0.2); }
+
+  .key-status {
+    margin-top: 8px;
+    font-size: 12px;
+    color: var(--muted);
+    font-family: 'DM Mono', monospace;
+  }
+
+  .key-status.ok { color: var(--accent2); }
+
+  /* Card */
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 28px;
+    margin-bottom: 20px;
+  }
+
+  /* Form */
+  .field { margin-bottom: 20px; }
+
+  .field label {
+    display: block;
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    margin-bottom: 8px;
+  }
+
+  textarea, select {
+    width: 100%;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 12px 14px;
+    font-family: 'Noto Sans JP', sans-serif;
+    font-size: 14px;
+    color: var(--text);
+    outline: none;
+    transition: border-color 0.2s;
+    resize: vertical;
+  }
+
+  textarea:focus, select:focus { border-color: var(--accent); }
+
+  textarea { min-height: 110px; line-height: 1.6; }
+
+  select {
+    cursor: pointer;
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23888899' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 14px center;
+    padding-right: 36px;
+  }
+
+  .row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+
+  @media (max-width: 500px) { .row { grid-template-columns: 1fr; } }
+
+  /* Button */
+  .btn {
+    width: 100%;
+    padding: 14px;
+    background: var(--accent);
+    border: none;
+    border-radius: 8px;
+    color: #0f0f11;
+    font-family: 'Noto Sans JP', sans-serif;
+    font-size: 15px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s;
+    margin-top: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+  }
+
+  .btn:hover { background: #f5d870; transform: translateY(-1px); }
+  .btn:active { transform: translateY(0); }
+  .btn:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+
+  /* Result */
+  .result-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 24px;
+    display: none;
+    animation: fadeUp 0.3s ease;
+  }
+
+  .result-card.visible { display: block; }
+
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .result-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 14px;
+  }
+
+  .result-label {
+    font-size: 11px;
+    font-weight: 500;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+  }
+
+  .char-badge {
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    padding: 4px 12px;
+    border-radius: 999px;
+    font-weight: 500;
+  }
+
+  .char-badge.ok { background: rgba(74,240,160,0.12); color: var(--accent2); border: 1px solid rgba(74,240,160,0.2); }
+  .char-badge.ng { background: rgba(240,90,74,0.12); color: var(--danger); border: 1px solid rgba(240,90,74,0.2); }
+
+  .result-text {
+    font-size: 18px;
+    font-weight: 700;
+    line-height: 1.6;
+    word-break: break-all;
+    color: var(--text);
+    margin-bottom: 16px;
+    padding: 16px;
+    background: var(--surface2);
+    border-radius: 8px;
+    border: 1px solid var(--border);
+  }
+
+  .copy-btn {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 8px 16px;
+    background: transparent;
+    color: var(--text);
+    font-family: 'Noto Sans JP', sans-serif;
+    transition: all 0.2s;
+  }
+
+  .copy-btn:hover { background: var(--surface2); border-color: var(--accent); color: var(--accent); }
+
+  /* SEO Keywords */
+  .seo-section {
+    margin-top: 20px;
+    padding-top: 20px;
+    border-top: 1px solid var(--border);
+  }
+
+  .seo-title {
+    font-size: 11px;
+    font-weight: 500;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    margin-bottom: 10px;
+  }
+
+  .kw-list { display: flex; flex-wrap: wrap; gap: 8px; }
+
+  .kw-tag {
+    font-size: 12px;
+    padding: 5px 12px;
+    border-radius: 6px;
+    background: rgba(74,160,240,0.1);
+    color: #7ac8f5;
+    border: 1px solid rgba(74,160,240,0.2);
+    font-family: 'DM Mono', monospace;
+  }
+
+  .seo-tip {
+    font-size: 12px;
+    color: var(--muted);
+    margin-top: 10px;
+    line-height: 1.6;
+  }
+
+  /* Error */
+  .error-msg {
+    background: rgba(240,90,74,0.1);
+    border: 1px solid rgba(240,90,74,0.2);
+    border-radius: 8px;
+    padding: 12px 16px;
+    font-size: 13px;
+    color: var(--danger);
+    margin-top: 16px;
+    display: none;
+  }
+
+  .error-msg.visible { display: block; }
+
+  /* Loading dots */
+  .dots::after {
+    content: '';
+    animation: dots 1.2s steps(4, end) infinite;
+  }
+
+  @keyframes dots {
+    0%   { content: ''; }
+    25%  { content: '.'; }
+    50%  { content: '..'; }
+    75%  { content: '...'; }
+  }
+
+  /* Footer */
+  .footer {
+    margin-top: 40px;
+    text-align: center;
+    font-size: 12px;
+    color: var(--muted);
+  }
+
+  .footer a { color: var(--accent); text-decoration: none; }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <div class="header">
+    <div class="badge">Amazon SEO Title Converter</div>
+    <h1>AliExpress → <span>Amazon</span><br>タイトル変換ツール</h1>
+    <p class="subtitle">AliExressの長い商品名を、Amazon Japan検索で上位表示されやすい<br>SEO最適化された70文字以内のタイトルに自動変換します。</p>
+  </div>
+
+  <!-- API Key -->
+  <div class="apikey-section">
+    <div class="apikey-header">
+      <span class="apikey-label">Anthropic API キー</span>
+      <span class="apikey-hint"><a href="https://console.anthropic.com/" target="_blank">取得はこちら →</a></span>
+    </div>
+    <div class="key-row">
+      <input type="password" class="key-input" id="apiKey" placeholder="sk-ant-..." autocomplete="off">
+      <button class="key-save-btn" onclick="saveKey()">保存</button>
+    </div>
+    <div class="key-status" id="keyStatus">APIキーを入力して保存してください</div>
+  </div>
+
+  <!-- Form -->
+  <div class="card">
+    <div class="field">
+      <label>AliExpress 商品名（英語・翻訳そのままでOK）</label>
+      <textarea id="aliTitle" placeholder="例: ネッカチーフ甘い水玉ヘッドバンドターバン韓国新鮮な小さなスカーフストライプ薄い三角ヘアバンド休暇"></textarea>
+    </div>
+    <div class="row">
+      <div class="field">
+        <label>カテゴリ</label>
+        <select id="category">
+          <option>帽子・ヘアアクセサリー</option>
+          <option>ジュエリー・アクセサリー</option>
+          <option>バッグ・財布</option>
+          <option>ファッション雑貨</option>
+          <option>インテリア・収納</option>
+          <option>キッチン用品</option>
+          <option>電子機器・ガジェット</option>
+          <option>スポーツ・アウトドア</option>
+          <option>美容・コスメ</option>
+          <option>おもちゃ・ホビー</option>
+          <option>その他</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>ターゲット</label>
+        <select id="target">
+          <option>20〜30代女性</option>
+          <option>30〜40代女性</option>
+          <option>男性全般</option>
+          <option>シニア層</option>
+          <option>子供・ファミリー</option>
+          <option>ビジネスパーソン</option>
+          <option>アウトドア愛好者</option>
+          <option>指定なし</option>
+        </select>
+      </div>
+    </div>
+    <button class="btn" id="genBtn" onclick="generate()">
+      <span id="btnText">タイトルを生成する</span>
+    </button>
+    <div class="error-msg" id="errorMsg"></div>
+  </div>
+
+  <!-- Result -->
+  <div class="result-card" id="resultCard">
+    <div class="result-top">
+      <span class="result-label">生成タイトル</span>
+      <span class="char-badge" id="charBadge"></span>
+    </div>
+    <div class="result-text" id="resultText"></div>
+    <button class="copy-btn" onclick="copyText()">
+      <span id="copyIcon">📋</span> コピー
+    </button>
+    <div class="seo-section" id="seoSection"></div>
+  </div>
+
+  <div class="footer">
+    Powered by <a href="https://www.anthropic.com" target="_blank">Anthropic Claude API</a>
+    &nbsp;·&nbsp; APIキーはブラウザのlocalStorageに保存されます
+  </div>
+
+</div>
+
+<script>
+  // Load saved key
+  window.addEventListener('load', () => {
+    const saved = localStorage.getItem('anthropic_api_key');
+    if (saved) {
+      document.getElementById('apiKey').value = saved;
+      document.getElementById('keyStatus').textContent = '✓ APIキーが保存されています';
+      document.getElementById('keyStatus').className = 'key-status ok';
+    }
+  });
+
+  function saveKey() {
+    const key = document.getElementById('apiKey').value.trim();
+    if (!key.startsWith('sk-ant-')) {
+      document.getElementById('keyStatus').textContent = '⚠ 正しいAPIキーを入力してください（sk-ant-...）';
+      document.getElementById('keyStatus').className = 'key-status';
+      return;
+    }
+    localStorage.setItem('anthropic_api_key', key);
+    document.getElementById('keyStatus').textContent = '✓ 保存しました';
+    document.getElementById('keyStatus').className = 'key-status ok';
+  }
+
+  async function generate() {
+    const apiKey = localStorage.getItem('anthropic_api_key') || document.getElementById('apiKey').value.trim();
+    const title = document.getElementById('aliTitle').value.trim();
+    const category = document.getElementById('category').value;
+    const target = document.getElementById('target').value;
+    const btn = document.getElementById('genBtn');
+    const btnText = document.getElementById('btnText');
+    const errorMsg = document.getElementById('errorMsg');
+    const resultCard = document.getElementById('resultCard');
+
+    errorMsg.className = 'error-msg';
+    resultCard.className = 'result-card';
+
+    if (!apiKey || !apiKey.startsWith('sk-ant-')) {
+      errorMsg.textContent = 'APIキーを入力・保存してください。';
+      errorMsg.className = 'error-msg visible';
+      return;
+    }
+    if (!title) {
+      errorMsg.textContent = '商品名を入力してください。';
+      errorMsg.className = 'error-msg visible';
+      return;
+    }
+
+    btn.disabled = true;
+    btnText.innerHTML = '<span class="dots">生成中</span>';
+
+    const prompt = `あなたはAmazon Japan SEOと商品タイトル最適化の専門家です。以下のAliExpress商品名を、Amazon Japan検索で上位表示されやすいSEO最適化された日本語タイトルに変換してください。
+
+ルール:
+- 必ず70文字以内（厳守）
+- 日本語で自然で読みやすい
+- 最も検索されやすいメインキーワードを先頭に配置
+- 購入意欲を高める具体的な特徴・用途を含める
+- 不要な記号・繰り返し・冗長な表現を除去
+
+出力はJSONのみ。説明文・コードブロック記号は含めない。
+形式: {"title":"タイトル","keywords":["kw1","kw2","kw3"]}
+
+カテゴリ: ${category}
+ターゲット: ${target}
+商品名: ${title}`;
+
+    try {
+      const res = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': apiKey,
+          'anthropic-version': '2023-06-01',
+          'anthropic-dangerous-direct-browser-access': 'true'
+        },
+        body: JSON.stringify({
+          model: 'claude-sonnet-4-20250514',
+          max_tokens: 300,
+          messages: [{ role: 'user', content: prompt }]
+        })
+      });
+
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.error?.message || 'HTTP ' + res.status);
+      }
+
+      const data = await res.json();
+      const raw = data.content.filter(b => b.type === 'text').map(b => b.text).join('').trim()
+        .replace(/^```json\s*/i, '').replace(/^```\s*/i, '').replace(/\s*```$/i, '');
+
+      let parsed;
+      try { parsed = JSON.parse(raw); }
+      catch { parsed = { title: raw.substring(0, 70), keywords: [] }; }
+
+      const text = (parsed.title || '').trim();
+      const keywords = Array.isArray(parsed.keywords) ? parsed.keywords : [];
+      const charCount = text.length;
+      const isOk = charCount <= 70;
+
+      document.getElementById('resultText').textContent = text;
+      const badge = document.getElementById('charBadge');
+      badge.textContent = `${charCount}文字 ${isOk ? '✓ OK' : '✗ 70字超過'}`;
+      badge.className = 'char-badge ' + (isOk ? 'ok' : 'ng');
+
+      const seo = document.getElementById('seoSection');
+      if (keywords.length) {
+        seo.innerHTML = `
+          <div class="seo-title">使用SEOキーワード</div>
+          <div class="kw-list">${keywords.map(k => `<span class="kw-tag">${k}</span>`).join('')}</div>
+          <p class="seo-tip">これらのキーワードはタイトル前半に配置し、Amazon検索での表示優先度を高めています。</p>`;
+      } else {
+        seo.innerHTML = '';
+      }
+
+      resultCard.className = 'result-card visible';
+
+    } catch (e) {
+      errorMsg.textContent = 'エラー: ' + e.message;
+      errorMsg.className = 'error-msg visible';
+    } finally {
+      btn.disabled = false;
+      btnText.textContent = 'タイトルを生成する';
+    }
+  }
+
+  function copyText() {
+    const text = document.getElementById('resultText').textContent;
+    navigator.clipboard.writeText(text).then(() => {
+      document.getElementById('copyIcon').textContent = '✅';
+      setTimeout(() => { document.getElementById('copyIcon').textContent = '📋'; }, 2000);
+    });
+  }
+</script>
+</body>
+</html>
